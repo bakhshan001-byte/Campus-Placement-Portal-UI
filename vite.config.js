@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev
+// Standard robust production config for React + Vite
 export default defineConfig({
   plugins: [react()],
   build: {
-    rollupOptions: {
-      // Compatibility aur external library check ko standard par rakha hai
-      external: []
-    }
+    outDir: 'dist',
+    emptyOutDir: true
   }
 })

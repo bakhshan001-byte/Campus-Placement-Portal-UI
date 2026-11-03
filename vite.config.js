@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
-      // Isse deployment ke compatibility errors bypass ho jayenge
-      external: [],
-    },
-  },
+      // Compatibility aur external library check ko standard par rakha hai
+      external: []
+    }
+  }
 })

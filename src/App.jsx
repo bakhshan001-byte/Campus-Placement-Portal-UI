@@ -15,6 +15,11 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 
 // ==========================================
+// BACKEND CONFIGURATION: Setting Naya Render URL globally
+// ==========================================
+axios.defaults.baseURL = 'https://onrender.com';
+
+// ==========================================
 // ENTERPRISE SECURITY: Global Axios Interceptor
 // ==========================================
 axios.interceptors.request.use(

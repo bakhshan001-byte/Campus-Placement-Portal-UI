@@ -20,7 +20,7 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:8080/api/users/register", formData);
+      await axios.post("https://onrender.com/api/users/register", formData);
       
       // Professional SweetAlert2 Popup
       Swal.fire({

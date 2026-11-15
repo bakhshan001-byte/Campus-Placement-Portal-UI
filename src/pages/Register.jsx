@@ -20,7 +20,7 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("https://onrender.com/api/users/register", formData);
+      await axios.post("https://campus-placement-portal-api-3.onrender.com/api/users/register", formData);
       
       // Professional SweetAlert2 Popup
       Swal.fire({

@@ -2,20 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { 
-  Briefcase, CalendarDays, Building2, Users, FileText, 
-  CheckCircle, XCircle, Trash2, Search, Filter, BarChart3, Trophy 
+import {
+  Briefcase, CalendarDays, Building2, Users, FileText,
+  CheckCircle, XCircle, Trash2, Search, Filter, BarChart3, Trophy
 } from 'lucide-react';
+
+// ==========================================
+// BACKEND SETTINGS (yahan se sab URLs control hote hain)
+// ==========================================
+const API_URL = 'https://campus-placement-portal-api-3.onrender.com';
+
+const JOBS_URL = `${API_URL}/api/jobs`;
+const APPLICATIONS_URL = `${API_URL}/api/applications`;
+
+// Har request ke saath login ka token khud lag jayega
+const api = axios.create({ baseURL: API_URL });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem('user'));
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
-  const [myAppliedJobs, setMyAppliedJobs] = useState([]); 
-  
+  const [myAppliedJobs, setMyAppliedJobs] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
-  
+
   const [jobData, setJobData] = useState({
     title: '',
     companyName: user ? user.name : '',
@@ -23,8 +41,7 @@ const Dashboard = () => {
     jobType: 'Full-Time Job',
     deadline: '',
     status: 'OPEN'
-  });
-
+  }); 
   useEffect(() => {
     if (user) {
       fetchJobs();
@@ -35,48 +52,51 @@ const Dashboard = () => {
         fetchStudentApplications();
       }
     }
+    // eslint-disable-next-line
   }, []);
 
   const fetchJobs = async () => {
     try {
-      const response = await axios.get("https://onrender.com");
+      const response = await api.get(JOBS_URL);
       setJobs(response.data);
     } catch (error) {
-      console.error("Error fetching jobs:", error);
+      console.error('Error fetching jobs:', error);
     }
   };
 
   const fetchCompanyApplications = async () => {
     try {
-      const response = await axios.get("https://onrender.com");
+      const response = await api.get(APPLICATIONS_URL);
       const myApplications = response.data.filter(
-        app => app.companyName === user.name || app.company_name === user.name
+        (app) => app.companyName === user.name || app.company_name === user.name
       );
       setApplications(myApplications);
     } catch (error) {
-      console.error("Error fetching applications:", error);
+      console.error('Error fetching applications:', error);
     }
   };
 
   const fetchStudentApplications = async () => {
     try {
-      const response = await axios.get(`https://onrender.com{user.id}`);
+      const response = await api.get(`${APPLICATIONS_URL}/student/${user.id}`);
       setMyAppliedJobs(response.data);
     } catch (error) {
-      console.error("Error fetching student applications:", error);
+      console.error('Error fetching student applications:', error);
     }
-  }; 
+  };
 
   const handlePostJob = async (e) => {
     e.preventDefault();
     try {
       const dataToPost = { ...jobData, companyName: user.name, company_name: user.name };
-      await axios.post("https://onrender.com", dataToPost);
+      await api.post(JOBS_URL, dataToPost);
       Swal.fire({ icon: 'success', title: 'Successfully Published!', confirmButtonColor: '#0d6efd' });
       setJobData({ ...jobData, title: '', description: '', deadline: '', jobType: 'Full-Time Job' });
-      fetchJobs(); 
+      fetchJobs();
     } catch (error) {
-      Swal.fire('Error', 'Failed to post.', 'error');
+      console.error('Post job error:', error);
+      const code = error.response ? error.response.status : 'no response';
+      Swal.fire('Error', `Failed to post. (Code: ${code})`, 'error');
     }
   };
 
@@ -92,7 +112,7 @@ const Dashboard = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.delete(`https://onrender.com{jobId}`);
+          await api.delete(`${JOBS_URL}/${jobId}`);
           Swal.fire('Deleted!', 'The job has been removed.', 'success');
           fetchJobs();
         } catch (error) {
@@ -101,14 +121,14 @@ const Dashboard = () => {
       }
     });
   }; 
-
   const handleApply = (job) => {
     const actualCompanyName = job.companyName || job.company_name || 'Unknown Company';
-    if(actualCompanyName === 'Unknown Company') {
-        Swal.fire('Error', 'This is an old job post without a company name.', 'error'); return;
+    if (actualCompanyName === 'Unknown Company') {
+      Swal.fire('Error', 'This is an old job post without a company name.', 'error');
+      return;
     }
-    
-    const alreadyApplied = myAppliedJobs.some(app => app.jobId === job.id);
+
+    const alreadyApplied = myAppliedJobs.some((app) => app.jobId === job.id);
     if (alreadyApplied) {
       Swal.fire('Notice', 'You have already applied for this job!', 'info');
       return;
@@ -127,20 +147,26 @@ const Dashboard = () => {
       if (result.isConfirmed && result.value) {
         try {
           const applicationData = {
-            studentId: user.id, jobId: job.id, jobTitle: job.title,
-            companyName: actualCompanyName, company_name: actualCompanyName,
-            studentName: user.name, studentEmail: user.email,
-            resumeLink: result.value, status: "PENDING"
+            studentId: user.id,
+            jobId: job.id,
+            jobTitle: job.title,
+            companyName: actualCompanyName,
+            company_name: actualCompanyName,
+            studentName: user.name,
+            studentEmail: user.email,
+            resumeLink: result.value,
+            status: 'PENDING'
           };
-          await axios.post("https://onrender.com", applicationData); 
+          await api.post(APPLICATIONS_URL, applicationData);
           Swal.fire('Applied Successfully!', 'Your profile has been shared.', 'success');
-          fetchStudentApplications(); 
+          fetchStudentApplications();
         } catch (error) {
           Swal.fire('Error', 'Failed to send application.', 'error');
         }
       }
     });
-  }; 
+  };
+
   const handleUpdateStatus = async (id, newStatus) => {
     Swal.fire({
       title: 'Are you sure?',
@@ -152,86 +178,96 @@ const Dashboard = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.put(`https://onrender.com{id}/status?status=${newStatus}`);
+          await api.put(`${APPLICATIONS_URL}/${id}/status?status=${newStatus}`);
           Swal.fire('Updated!', `The candidate has been ${newStatus}.`, 'success');
-          fetchCompanyApplications(); 
+          fetchCompanyApplications();
         } catch (error) {
           Swal.fire('Error', 'Failed to update status.', 'error');
         }
       }
     });
   };
-
   const getStatusBadgeClass = (status) => {
     if (status === 'ACCEPTED') return 'badge bg-success px-3 py-2 rounded-pill';
     if (status === 'REJECTED') return 'badge bg-danger px-3 py-2 rounded-pill';
     return 'badge bg-warning text-dark px-3 py-2 rounded-pill';
   };
 
-  // NAYA LOGIC: Job Expire Check
+  // Job Expire Check
   const isJobExpired = (deadlineString) => {
     if (!deadlineString) return false;
     const deadlineDate = new Date(deadlineString);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); 
+    today.setHours(0, 0, 0, 0);
     return deadlineDate < today;
   };
 
   if (!user) return <Navigate to="/login" />;
 
-  const filteredJobs = jobs.filter(job => {
+  const filteredJobs = jobs.filter((job) => {
     const jobTitle = job.title?.toLowerCase() || '';
     const jobCompany = job.companyName?.toLowerCase() || job.company_name?.toLowerCase() || '';
-    const matchesSearch = jobTitle.includes(searchTerm.toLowerCase()) || jobCompany.includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      jobTitle.includes(searchTerm.toLowerCase()) || jobCompany.includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'All' || job.jobType === filterType;
     return matchesSearch && matchesType;
   });
 
-  const myPostedJobsCount = jobs.filter(j => j.companyName === user.name || j.company_name === user.name).length;
+  const myPostedJobsCount = jobs.filter(
+    (j) => j.companyName === user.name || j.company_name === user.name
+  ).length;
   const totalAppsCount = applications.length;
-  const totalHiredCount = applications.filter(app => app.status === 'ACCEPTED').length;
+  const totalHiredCount = applications.filter((app) => app.status === 'ACCEPTED').length;
 
   return (
     <div className="container mt-5 mb-5 pb-5">
-      
       {/* ENTERPRISE HERO SECTION */}
       <div className="row mb-5 justify-content-center">
         <div className="col-md-11">
-          <div 
-            className="p-5 rounded-4 shadow-sm text-center" 
-            style={{ 
-              background: 'linear-gradient(135deg, #0A2540 0%, #1A365D 100%)', 
+          <div
+            className="p-5 rounded-4 shadow-sm text-center"
+            style={{
+              background: 'linear-gradient(135deg, #0A2540 0%, #1A365D 100%)',
               border: '1px solid rgba(255, 255, 255, 0.05)',
               position: 'relative',
               overflow: 'hidden'
             }}
           >
-            <div style={{
-              position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
-              background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%)',
-              pointerEvents: 'none'
-            }}></div>
+            <div
+              style={{
+                position: 'absolute',
+                top: '-50%',
+                left: '-50%',
+                width: '200%',
+                height: '200%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%)',
+                pointerEvents: 'none'
+              }}
+            ></div>
 
             <h2 className="fw-bolder display-5 text-white mb-3 position-relative z-1">
               {user.role === 'COMPANY' ? '🏢 Corporate HR Dashboard' : '🎓 Student Career Portal'}
             </h2>
             <p className="fs-5 mb-0 position-relative z-1" style={{ color: '#94a3b8' }}>
-              {user.role === 'COMPANY' 
-                ? 'Manage your job postings, track applicants, and hire top talent seamlessly.' 
+              {user.role === 'COMPANY'
+                ? 'Manage your job postings, track applicants, and hire top talent seamlessly.'
                 : 'Discover premium internships and full-time roles tailored for you.'}
             </p>
           </div>
         </div>
-      </div> 
+      </div>
+
       <div className="row justify-content-center">
-        
         {/* COMPANY DASHBOARD SECTION */}
         {user.role === 'COMPANY' && (
           <>
             <div className="col-lg-12 mb-5">
               <div className="row g-4">
                 <div className="col-md-4">
-                  <div className="card border-0 rounded-4 shadow-sm text-white" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
+                  <div
+                    className="card border-0 rounded-4 shadow-sm text-white"
+                    style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}
+                  >
                     <div className="card-body p-4 d-flex align-items-center justify-content-between">
                       <div>
                         <h6 className="text-white-50 fw-bold text-uppercase mb-1">Active Postings</h6>
@@ -242,7 +278,10 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="col-md-4">
-                  <div className="card border-0 rounded-4 shadow-sm text-white" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }}>
+                  <div
+                    className="card border-0 rounded-4 shadow-sm text-white"
+                    style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)' }}
+                  >
                     <div className="card-body p-4 d-flex align-items-center justify-content-between">
                       <div>
                         <h6 className="text-white-50 fw-bold text-uppercase mb-1">Applications Received</h6>
@@ -253,7 +292,10 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="col-md-4">
-                  <div className="card border-0 rounded-4 shadow-sm text-white" style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)' }}>
+                  <div
+                    className="card border-0 rounded-4 shadow-sm text-white"
+                    style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)' }}
+                  >
                     <div className="card-body p-4 d-flex align-items-center justify-content-between">
                       <div>
                         <h6 className="text-white-50 fw-bold text-uppercase mb-1">Candidates Hired</h6>
@@ -294,28 +336,37 @@ const Dashboard = () => {
                           {applications.map((app, index) => (
                             <tr key={index}>
                               <td className="px-4 py-3 fw-bold text-dark">
-                                {app.studentName} <br/>
+                                {app.studentName} <br />
                                 <small className="text-muted fw-normal">{app.studentEmail}</small>
                               </td>
                               <td className="px-4 py-3 text-primary fw-semibold">{app.jobTitle}</td>
                               <td className="px-4 py-3">
-                                <span className={getStatusBadgeClass(app.status)}>
-                                  {app.status}
-                                </span>
+                                <span className={getStatusBadgeClass(app.status)}>{app.status}</span>
                               </td>
                               <td className="px-4 py-3">
-                                <a href={app.resumeLink} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary btn-sm fw-bold px-3 rounded-pill">
+                                <a
+                                  href={app.resumeLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-outline-primary btn-sm fw-bold px-3 rounded-pill"
+                                >
                                   <FileText size={16} className="me-1" /> View CV
                                 </a>
                               </td>
                               <td className="px-4 py-3 text-center">
                                 {app.status === 'PENDING' ? (
                                   <div className="d-flex justify-content-center gap-2">
-                                    <button onClick={() => handleUpdateStatus(app.id, 'ACCEPTED')} className="btn btn-success btn-sm rounded-pill px-3 fw-bold">
-                                      <CheckCircle size={16} className="me-1"/> Accept
+                                    <button
+                                      onClick={() => handleUpdateStatus(app.id, 'ACCEPTED')}
+                                      className="btn btn-success btn-sm rounded-pill px-3 fw-bold"
+                                    >
+                                      <CheckCircle size={16} className="me-1" /> Accept
                                     </button>
-                                    <button onClick={() => handleUpdateStatus(app.id, 'REJECTED')} className="btn btn-danger btn-sm rounded-pill px-3 fw-bold">
-                                      <XCircle size={16} className="me-1"/> Reject
+                                    <button
+                                      onClick={() => handleUpdateStatus(app.id, 'REJECTED')}
+                                      className="btn btn-danger btn-sm rounded-pill px-3 fw-bold"
+                                    >
+                                      <XCircle size={16} className="me-1" /> Reject
                                     </button>
                                   </div>
                                 ) : (
@@ -335,32 +386,58 @@ const Dashboard = () => {
             <div className="col-lg-8 mb-5">
               <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
                 <div className="card-header bg-primary text-white p-3">
-                  <h5 className="mb-0 fw-bold"><Briefcase className="me-2" size={20} /> Post New Job</h5>
+                  <h5 className="mb-0 fw-bold">
+                    <Briefcase className="me-2" size={20} /> Post New Job
+                  </h5>
                 </div>
                 <div className="card-body p-4 bg-white border border-top-0 rounded-bottom-4">
                   <form onSubmit={handlePostJob}>
                     <div className="row g-3">
                       <div className="col-md-6">
                         <label className="fw-bold">Job Title</label>
-                        <input type="text" className="form-control" value={jobData.title} onChange={(e) => setJobData({...jobData, title: e.target.value})} required />
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={jobData.title}
+                          onChange={(e) => setJobData({ ...jobData, title: e.target.value })}
+                          required
+                        />
                       </div>
                       <div className="col-md-6">
                         <label className="fw-bold">Type</label>
-                        <select className="form-select" value={jobData.jobType} onChange={(e) => setJobData({...jobData, jobType: e.target.value})}>
+                        <select
+                          className="form-select"
+                          value={jobData.jobType}
+                          onChange={(e) => setJobData({ ...jobData, jobType: e.target.value })}
+                        >
                           <option>Full-Time Job</option>
                           <option>3 Months Internship</option>
                         </select>
                       </div>
                       <div className="col-md-12">
                         <label className="fw-bold">Deadline</label>
-                        <input type="date" className="form-control" value={jobData.deadline} onChange={(e) => setJobData({...jobData, deadline: e.target.value})} required />
-                      </div>
+                        <input
+                          type="date"
+                          className="form-control"
+                          value={jobData.deadline}
+                          onChange={(e) => setJobData({ ...jobData, deadline: e.target.value })}
+                          required
+                        />
+                      </div> 
                       <div className="col-md-12">
                         <label className="fw-bold">Description</label>
-                        <textarea className="form-control" rows="3" value={jobData.description} onChange={(e) => setJobData({...jobData, description: e.target.value})} required />
+                        <textarea
+                          className="form-control"
+                          rows="3"
+                          value={jobData.description}
+                          onChange={(e) => setJobData({ ...jobData, description: e.target.value })}
+                          required
+                        />
                       </div>
                       <div className="col-md-12 mt-3">
-                        <button type="submit" className="btn btn-primary w-100 fw-bold rounded-pill">Publish Job</button>
+                        <button type="submit" className="btn btn-primary w-100 fw-bold rounded-pill">
+                          Publish Job
+                        </button>
                       </div>
                     </div>
                   </form>
@@ -369,69 +446,77 @@ const Dashboard = () => {
             </div>
           </>
         )} 
-
         {/* STUDENT DASHBOARD SECTION (My Applications) */}
         {user.role === 'STUDENT' && myAppliedJobs.length > 0 && (
           <div className="col-lg-12 mb-5">
-             <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
-                <div className="card-header bg-primary text-white p-4">
-                  <h4 className="mb-0 fw-bold d-flex align-items-center">
-                    <FileText className="me-2" /> My Applications Status
-                  </h4>
-                </div>
-                <div className="card-body p-0 bg-white border border-top-0 rounded-bottom-4">
-                  <div className="table-responsive">
-                    <table className="table table-hover align-middle mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th className="px-4 py-3">Job Role</th>
-                          <th className="px-4 py-3">Company</th>
-                          <th className="px-4 py-3">Applied Link</th>
-                          <th className="px-4 py-3 text-center">Current Status</th>
+            <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
+              <div className="card-header bg-primary text-white p-4">
+                <h4 className="mb-0 fw-bold d-flex align-items-center">
+                  <FileText className="me-2" /> My Applications Status
+                </h4>
+              </div>
+              <div className="card-body p-0 bg-white border border-top-0 rounded-bottom-4">
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="px-4 py-3">Job Role</th>
+                        <th className="px-4 py-3">Company</th>
+                        <th className="px-4 py-3">Applied Link</th>
+                        <th className="px-4 py-3 text-center">Current Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myAppliedJobs.map((app, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-3 fw-bold text-dark">{app.jobTitle}</td>
+                          <td className="px-4 py-3 text-secondary fw-semibold">
+                            <Building2 size={16} className="me-1" /> {app.companyName || app.company_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            <a
+                              href={app.resumeLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary text-decoration-none fw-semibold"
+                            >
+                              View Submitted Resume
+                            </a>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={getStatusBadgeClass(app.status)}>{app.status}</span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {myAppliedJobs.map((app, index) => (
-                          <tr key={index}>
-                            <td className="px-4 py-3 fw-bold text-dark">{app.jobTitle}</td>
-                            <td className="px-4 py-3 text-secondary fw-semibold">
-                              <Building2 size={16} className="me-1"/> {app.companyName || app.company_name}
-                            </td>
-                            <td className="px-4 py-3">
-                              <a href={app.resumeLink} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none fw-semibold">
-                                View Submitted Resume
-                              </a>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={getStatusBadgeClass(app.status)}>
-                                {app.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
-        )} 
+        )}
+
+        {/* JOBS LIST */}
         <div className="col-12 mt-2">
           <div className="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
             <h3 className="fw-bolder mb-0 text-dark">
               {user.role === 'COMPANY' ? 'Your Active Postings' : 'Exclusive Opportunities'}
             </h3>
-            <span className="badge bg-primary fs-6 rounded-pill px-3 py-2">{filteredJobs.length} Available</span>
+            <span className="badge bg-primary fs-6 rounded-pill px-3 py-2">
+              {filteredJobs.length} Available
+            </span>
           </div>
 
           <div className="row mb-5 bg-white p-3 rounded-4 shadow-sm border mx-0">
             <div className="col-md-7 mb-3 mb-md-0">
               <div className="input-group input-group-lg">
-                <span className="input-group-text bg-light border-end-0"><Search size={20} className="text-muted"/></span>
-                <input 
-                  type="text" 
-                  className="form-control border-start-0 bg-light fs-6" 
-                  placeholder="Search jobs by title or company name..." 
+                <span className="input-group-text bg-light border-end-0">
+                  <Search size={20} className="text-muted" />
+                </span>
+                <input
+                  type="text"
+                  className="form-control border-start-0 bg-light fs-6"
+                  placeholder="Search jobs by title or company name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -439,8 +524,10 @@ const Dashboard = () => {
             </div>
             <div className="col-md-5">
               <div className="input-group input-group-lg">
-                <span className="input-group-text bg-light border-end-0"><Filter size={20} className="text-muted"/></span>
-                <select 
+                <span className="input-group-text bg-light border-end-0">
+                  <Filter size={20} className="text-muted" />
+                </span>
+                <select
                   className="form-select border-start-0 bg-light fs-6"
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
@@ -452,8 +539,7 @@ const Dashboard = () => {
                 </select>
               </div>
             </div>
-          </div>
-          
+          </div> 
           <div className="row g-4">
             {filteredJobs.length === 0 ? (
               <div className="col-12 text-center py-5 bg-white rounded-4 border">
@@ -462,66 +548,86 @@ const Dashboard = () => {
               </div>
             ) : (
               filteredJobs.map((job, index) => {
-                const isExpired = isJobExpired(job.deadline); // CHECK EXPIRY
+                const isExpired = isJobExpired(job.deadline);
                 return (
-                <div className="col-xl-4 col-lg-6" key={index}>
-                  <div className={`card h-100 border-0 shadow-sm premium-card rounded-4 position-relative ${isExpired ? 'opacity-75' : ''}`}>
-                    <div className="card-body p-4">
-                      
-                      {user.role === 'COMPANY' && (job.companyName === user.name || job.company_name === user.name) && (
-                         <div className="d-flex justify-content-end mb-2 position-absolute top-0 end-0 mt-3 me-3 z-3">
-                            <button 
-                              onClick={() => handleDeleteJob(job.id, job.title)} 
-                              className="btn btn-sm btn-outline-danger border-0 rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                              style={{ width: '35px', height: '35px' }}
-                              title="Delete this job"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                         </div>
-                      )}
+                  <div className="col-xl-4 col-lg-6" key={index}>
+                    <div
+                      className={`card h-100 border-0 shadow-sm premium-card rounded-4 position-relative ${
+                        isExpired ? 'opacity-75' : ''
+                      }`}
+                    >
+                      <div className="card-body p-4">
+                        {user.role === 'COMPANY' &&
+                          (job.companyName === user.name || job.company_name === user.name) && (
+                            <div className="d-flex justify-content-end mb-2 position-absolute top-0 end-0 mt-3 me-3 z-3">
+                              <button
+                                onClick={() => handleDeleteJob(job.id, job.title)}
+                                className="btn btn-sm btn-outline-danger border-0 rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                                style={{ width: '35px', height: '35px' }}
+                                title="Delete this job"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          )}
 
-                      <div className="d-flex justify-content-between align-items-start mb-3">
-                        {/* CONDITIONAL BADGE RENDER */}
-                        {isExpired ? (
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          {isExpired ? (
                             <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-2 fw-bold d-flex align-items-center">
                               <XCircle size={14} className="me-1" /> Closed
                             </span>
                           ) : (
                             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2 fw-bold d-flex align-items-center">
-                              <span className="spinner-grow spinner-grow-sm me-2 text-success" role="status" aria-hidden="true" style={{width: '0.5rem', height: '0.5rem'}}></span>
+                              <span
+                                className="spinner-grow spinner-grow-sm me-2 text-success"
+                                role="status"
+                                aria-hidden="true"
+                                style={{ width: '0.5rem', height: '0.5rem' }}
+                              ></span>
                               Active
                             </span>
                           )}
-                        <span className="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold">{job.jobType || 'General'}</span>
+                          <span className="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold">
+                            {job.jobType || 'General'}
+                          </span>
+                        </div>
+                        <h4 className="card-title fw-bolder text-dark mb-1 pe-4">{job.title}</h4>
+                        <h6 className="text-primary fw-bold mb-4 d-flex align-items-center">
+                          <Building2 size={16} className="me-2" />{' '}
+                          {job.companyName || job.company_name || 'Unknown Company'}
+                        </h6>
+                        <p className="card-text text-secondary mb-4 description-text">{job.description}</p>
+                        <div className="d-flex align-items-center text-muted small mb-4 bg-light p-2 rounded">
+                          <CalendarDays size={16} className="me-2 text-danger" />
+                          <span className="fw-semibold">
+                            Deadline: <span className="text-dark">{job.deadline || 'Not Specified'}</span>
+                          </span>
+                        </div>
                       </div>
-                      <h4 className="card-title fw-bolder text-dark mb-1 pe-4">{job.title}</h4>
-                      <h6 className="text-primary fw-bold mb-4 d-flex align-items-center">
-                        <Building2 size={16} className="me-2" /> {job.companyName || job.company_name || 'Unknown Company'}
-                      </h6>
-                      <p className="card-text text-secondary mb-4 description-text">{job.description}</p>
-                      <div className="d-flex align-items-center text-muted small mb-4 bg-light p-2 rounded">
-                        <CalendarDays size={16} className="me-2 text-danger" />
-                        <span className="fw-semibold">Deadline: <span className="text-dark">{job.deadline || 'Not Specified'}</span></span>
-                      </div>
-                    </div>
-                    {user.role === 'STUDENT' && (
-                      <div className="card-footer bg-white border-top-0 pt-0 pb-4 px-4">
-                        {/* CONDITIONAL BUTTON RENDER */}
-                        {isExpired ? (
-                            <button disabled className="btn btn-secondary w-100 fw-bold btn-lg rounded-pill shadow-none" style={{ cursor: 'not-allowed' }}>
+                      {user.role === 'STUDENT' && (
+                        <div className="card-footer bg-white border-top-0 pt-0 pb-4 px-4">
+                          {isExpired ? (
+                            <button
+                              disabled
+                              className="btn btn-secondary w-100 fw-bold btn-lg rounded-pill shadow-none"
+                              style={{ cursor: 'not-allowed' }}
+                            >
                               Applications Closed
                             </button>
                           ) : (
-                            <button onClick={() => handleApply(job)} className="btn btn-primary w-100 fw-bold btn-lg rounded-pill shadow-sm apply-btn">
+                            <button
+                              onClick={() => handleApply(job)}
+                              className="btn btn-primary w-100 fw-bold btn-lg rounded-pill shadow-sm apply-btn"
+                            >
                               Apply Now
                             </button>
                           )}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )})
+                );
+              })
             )}
           </div>
         </div>

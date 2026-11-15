@@ -9,7 +9,7 @@ const AdminDashboard = () => {
 
     const fetchUsers = async () => {
         try {
-            const response = await axios.get("http://localhost:8080/api/users/all");
+            const response = await axios.get("https://onrender.com");
             setUsers(response.data);
             setLoading(false);
         } catch (error) {
@@ -35,7 +35,8 @@ const AdminDashboard = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await axios.delete(`http://localhost:8080/api/users/delete/${id}`);
+                    await axios.delete(`https://onrender.com{id}`);
+                    
                     Swal.fire('Deleted!', 'The user has been successfully removed from the platform.', 'success');
                     fetchUsers();
                 } catch (error) {

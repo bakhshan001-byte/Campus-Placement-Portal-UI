@@ -15,7 +15,7 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/api/users/forgot-password", { email });
+      const response = await axios.post("https://onrender.com", { email });
       Swal.fire({ icon: 'success', title: 'OTP Sent!', text: response.data, confirmButtonColor: '#2563eb' });
       setStep(2); 
     } catch (error) {
@@ -29,7 +29,7 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:8080/api/users/reset-password", { email, otp, newPassword });
+      const response = await axios.post("https://onrender.com", { email, otp, newPassword });
       Swal.fire({ icon: 'success', title: 'Password Reset!', text: response.data, confirmButtonColor: '#10b981' })
       .then(() => {
         navigate('/login'); 

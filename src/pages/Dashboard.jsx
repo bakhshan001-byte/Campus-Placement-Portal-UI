@@ -39,7 +39,7 @@ const Dashboard = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/jobs/all");
+      const response = await axios.get("https://onrender.com");
       setJobs(response.data);
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -48,7 +48,7 @@ const Dashboard = () => {
 
   const fetchCompanyApplications = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/applications/all");
+      const response = await axios.get("https://onrender.com");
       const myApplications = response.data.filter(
         app => app.companyName === user.name || app.company_name === user.name
       );
@@ -60,7 +60,7 @@ const Dashboard = () => {
 
   const fetchStudentApplications = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/applications/student/${user.id}`);
+      const response = await axios.get(`https://onrender.com{user.id}`);
       setMyAppliedJobs(response.data);
     } catch (error) {
       console.error("Error fetching student applications:", error);
@@ -71,7 +71,7 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       const dataToPost = { ...jobData, companyName: user.name, company_name: user.name };
-      await axios.post("http://localhost:8080/api/jobs/post", dataToPost);
+      await axios.post("https://onrender.com", dataToPost);
       Swal.fire({ icon: 'success', title: 'Successfully Published!', confirmButtonColor: '#0d6efd' });
       setJobData({ ...jobData, title: '', description: '', deadline: '', jobType: 'Full-Time Job' });
       fetchJobs(); 
@@ -92,7 +92,7 @@ const Dashboard = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.delete(`http://localhost:8080/api/jobs/delete/${jobId}`);
+          await axios.delete(`https://onrender.com{jobId}`);
           Swal.fire('Deleted!', 'The job has been removed.', 'success');
           fetchJobs();
         } catch (error) {
@@ -132,7 +132,7 @@ const Dashboard = () => {
             studentName: user.name, studentEmail: user.email,
             resumeLink: result.value, status: "PENDING"
           };
-          await axios.post("http://localhost:8080/api/applications/apply", applicationData);
+          await axios.post("https://onrender.com", applicationData); 
           Swal.fire('Applied Successfully!', 'Your profile has been shared.', 'success');
           fetchStudentApplications(); 
         } catch (error) {
@@ -152,7 +152,7 @@ const Dashboard = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.put(`http://localhost:8080/api/applications/${id}/status?status=${newStatus}`);
+          await axios.put(`https://onrender.com{id}/status?status=${newStatus}`);
           Swal.fire('Updated!', `The candidate has been ${newStatus}.`, 'success');
           fetchCompanyApplications(); 
         } catch (error) {

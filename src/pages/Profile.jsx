@@ -43,7 +43,7 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await axios.put(`http://localhost:8080/api/users/update/${user.id}`, formData);
+      const response = await axios.put(`https://onrender.com{user.id}`, formData);
       localStorage.setItem('user', JSON.stringify(response.data));
       setUser(response.data);
       Swal.fire({ icon: 'success', title: 'Profile Updated!', text: 'Your details have been saved successfully.', confirmButtonColor: '#10b981' });

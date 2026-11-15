@@ -22,7 +22,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post("https://campus-placement-portal-api-3.onrender.com/api/users/login,loginData);
+      const response = await axios.post("https://campus-placement-portal-api-3onrender.com/api/users/login,loginData);
       
       // JWT, User Data aur Role ko safely save karna
       localStorage.setItem('token', response.data.token); 
